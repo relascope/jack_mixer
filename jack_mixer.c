@@ -921,13 +921,13 @@ void *
 port_connection_thread(void *args)
 {
   struct port_connection_thread_args * conn_args = (struct port_connection_thread_args*) args;
-+ void * context = conn_args->context;
-+ jack_client_t * client = mixer_ptr->jack_client;
-+ jack_port_t * auto_port = mixer_ptr->port_auto_in;
-+ char * client_name;
-+ char * new_port_name;
-+ char * full_new_port_name;
-+ int ret = 0;
+  void * context = conn_args->context;
+  jack_client_t * client = mixer_ptr->jack_client;
+  jack_port_t * auto_port = mixer_ptr->port_auto_in;
+  char * client_name;
+  char * new_port_name;
+  char * full_new_port_name;
+  int ret = 0;
 
   // Determine the name of the new channel: the source port name plus ' mixer'
   new_port_name = find_new_port_name(client, conn_args->source_port_name);
