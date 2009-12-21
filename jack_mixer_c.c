@@ -341,6 +341,28 @@ Channel_get_midi_change_callback(ChannelObject *self, void *closure)
 }
 
 static void
+perform_newchannel_callback(void *userdata, char* name)
+{
+	PyObject * callback = (PyObject *) userdata;
+	if (!PyCallable_Check(callback))
+	{
+		fprintf(stderr, "Error calling callback\n");
+	}
+ 	else
+	{
+		PyGILState_STATE gstate;
+		gstate = PyGILState_Ensure();
+
+		PyObject * result = PyObject_CallFunction(callback, "s", name);
+		if (result == NULL)
+		{
+			fprintf(stderr, "Callback returned NULL\n");
+		}
+		PyGILState_Release(gstate);
+	}
+}
+
+static void
 channel_midi_callback(void *userdata)
 {
 	ChannelObject *self = (ChannelObject*)userdata;
@@ -777,11 +799,14 @@ Mixer_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 static int
 Mixer_init(MixerObject *self, PyObject *args, PyObject *kwds)
 {
-	static char *kwlist[] = {"name", NULL};
+	static char *kwlist[] = {"name", "nccallback", NULL};
 	char *name;
+	PyObject * nccallback;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "s", kwlist, &name))
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "sO", kwlist, &name, &nccallback))
 		return -1;
+
+	Py_INCREF(nccallback);
 	
 	self->mixer = create(name);
 	if (self->mixer == NULL) {
@@ -791,6 +816,14 @@ Mixer_init(MixerObject *self, PyObject *args, PyObject *kwds)
 	}
 
 	self->main_mix_channel = Channel_New(get_main_mix_channel(self->mixer));
+	if (!PyCallable_Check(nccallback))
+	{
+		fprintf(stderr, "Error adding newchannel callback\n");
+	}
+	else
+	{
+		set_newchannel_callback(perform_newchannel_callback, nccallback);
+	}
 
 	return 0;
 }
@@ -828,7 +861,7 @@ Mixer_add_channel(MixerObject *self, PyObject *args)
 	int stereo;
 	jack_mixer_channel_t channel;
 
-	if (! PyArg_ParseTuple(args, "sb", &name, &stereo)) return NULL;
+	if (! PyArg_ParseTuple(args, "si", &name, &stereo)) return NULL;
 
 	channel = add_channel(self->mixer, name, (bool)stereo);
 

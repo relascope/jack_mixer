@@ -62,7 +62,7 @@ class JackMixer(SerializedObject):
     current_filename = None
 
     def __init__(self, name, lash_client):
-        self.mixer = jack_mixer_c.Mixer(name)
+        self.mixer = jack_mixer_c.Mixer(name, self.newchannel_callback)
         if not self.mixer:
             return
         self.monitor_channel = self.mixer.add_output_channel("Monitor", True, True)
@@ -394,6 +394,16 @@ class JackMixer(SerializedObject):
             channel.channel.autoset_midi_cc()
 
         return channel
+
+    def add_channel_and_refresh(self, name, stereo, volume_cc, balance_cc):
+        self.add_channel(name, stereo, volume_cc, balance_cc)
+        self.window.show_all()
+        # must return None, because otherwise gobject.idle_add will keep calling
+        # this message
+        return None;
+    
+    def newchannel_callback(self, *args):
+        gobject.idle_add(self.add_channel_and_refresh, args[0], 0, 0, 0);
 
     def add_channel_precreated(self, channel):
         frame = gtk.Frame()

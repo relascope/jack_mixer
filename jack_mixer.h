@@ -92,6 +92,15 @@ channel_set_midi_change_callback(
   void (*midi_change_callback) (void*),
   void *user_data);
 
+/*
+ * Initialize the newchannel_callback. Called on startup (when the python 
+ * Mixer is initialized)
+ */
+void
+set_newchannel_callback(
+  void (*newchannel_callback) (void*,char*),
+  void *user_data);
+
 /* volume is in dBFS */
 void
 channel_volume_write(

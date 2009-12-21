@@ -36,6 +36,7 @@
 #include <pthread.h>
 
 #include <glib.h>
+#include <unistd.h>
 
 #include "jack_mixer.h"
 //#define LOG_LEVEL LOG_LEVEL_DEBUG
@@ -103,6 +104,9 @@ struct jack_mixer
 
   jack_port_t * port_midi_in;
   unsigned int last_midi_channel;
+
+  /* Port to accept connections for which channels are automatically created */
+  jack_port_t * port_auto_in;
 
   struct channel* midi_cc_map[128];
 };
@@ -539,6 +543,29 @@ channel_set_midi_change_callback(
 
 #undef channel_ptr
 
+/* 
+ * When called with the 'userdata' below and the desired channel name, 
+ * this will make sure a new channel is added to the mixer
+ *
+ * This callback is initialized by set_newchannel_callback, which is called
+ * when the python Mixer is initialized.
+ */
+void (*newchannel_callback) (void*,char*) = NULL;
+void * newchannel_callback_userdata = NULL;
+
+/*
+ * Initialize the newchannel_callback. Called on startup (when the python 
+ * Mixer is initialized)
+ */
+void
+set_newchannel_callback(
+  void (*callback) (void*,char*),
+  void *user_data)
+{
+  newchannel_callback = callback;
+  newchannel_callback_userdata = user_data;
+}
+
 /* process input channels and mix them into main mix */
 static inline void
 mix_one(
@@ -832,6 +859,162 @@ update_channel_buffers(
 
 #define mixer_ptr ((struct jack_mixer *)context)
 
+/**
+ * checks whether the given name is taken. 
+ *
+ * name: port name, without the 'client:' prefix.
+ */
+bool
+jack_port_name_taken(jack_client_t * client, const char * name)
+{
+  char * client_name = jack_get_client_name(client);
+  char * full_name = (char *) malloc (strlen(client_name) + 1 + strlen(name) + 1);
+  bool taken;
+
+  sprintf(full_name, "%s:%s", client_name, name);
+  taken = jack_port_by_name(client, full_name) != NULL;
+
+  free(full_name);
+  return taken;
+}
+/**
+ * Find an available port name to create a port when the source port with name
+ * source_name is connected to the 'auto' port
+ */
+char *
+find_new_port_name(jack_client_t * client, const char * source_name)
+{
+  int i;
+  char * result;
+
+  result = (char *) malloc (strlen(source_name) + 9);
+  sprintf(result, "%s mixer", source_name);
+
+  for (i = 0; i < 100; i++)
+  {
+    if (! jack_port_name_taken(client, result))
+    {
+      return result;
+    }
+    
+    free(result);
+    result = (char *) malloc (strlen(source_name) + 9 + 2 + (i % 10));
+    sprintf(result, "%s mixer %d", source_name, i);
+  }
+
+  LOG_ERROR("Failed to determine an available port name based on source %s", source_name);
+
+  return NULL;
+}
+
+/**
+ * used to hold the data passed from the connection-callback to the thread 
+ * making the connections to the newly created channel
+ */
+struct port_connection_thread_args
+{
+  const char * source_port_name;
+  void * context;
+};
+
+void *
+port_connection_thread(void *args)
+{
+  struct port_connection_thread_args * conn_args = (struct port_connection_thread_args*) args;
++ void * context = conn_args->context;
++ jack_client_t * client = mixer_ptr->jack_client;
++ jack_port_t * auto_port = mixer_ptr->port_auto_in;
++ char * client_name;
++ char * new_port_name;
++ char * full_new_port_name;
++ int ret = 0;
+
+  // Determine the name of the new channel: the source port name plus ' mixer'
+  new_port_name = find_new_port_name(client, conn_args->source_port_name);
+
+  // The full port name also contains the client name, which is needed for disconnecting
+  client_name = jack_get_client_name(mixer_ptr->jack_client);
+  full_new_port_name = (char *) malloc (strlen(client_name) + 1 + strlen(new_port_name) + 1);
+  sprintf(full_new_port_name, "%s:%s", client_name, new_port_name);
+
+  // call the Python code for creating the channel - this will happen in the GTK thread.
+  newchannel_callback(newchannel_callback_userdata, new_port_name);
+
+  // give the gui thread some time to create the channel - perhaps it would be better if we
+  // did the rest of the processing below in a port_registration callback rather than here,
+  // but then we'd need to remember the parameters somehow, which isn't too elegant either.
+  usleep(250000);
+
+  // disconnect source and 'auto' port
+  ret = jack_disconnect(mixer_ptr->jack_client, conn_args->source_port_name, jack_port_name(auto_port));
+  if (ret != 0)
+  {
+    LOG_ERROR("Failed to disconnect source from auto port, error %d", ret);
+  }
+
+  // connect source to the newly created port
+  ret = jack_connect(client, conn_args->source_port_name, full_new_port_name);
+  if (ret != 0)
+  {
+    LOG_ERROR("Failed to connect source to newly created input port %s, error %d", full_new_port_name, ret);
+  }
+
+  return NULL;
+}
+
+/**
+ * Find out what (if anything) just got connected to our 'auto' port
+ */
+jack_port_t *
+port_connected_to_auto_in(jack_port_id_t a, jack_port_id_t b, void* context)
+{
+  jack_port_t * port_a = jack_port_by_id(mixer_ptr->jack_client, a);
+  jack_port_t * port_b = jack_port_by_id(mixer_ptr->jack_client, b);
+
+  if (port_a == mixer_ptr->port_auto_in)
+  {
+    return port_b;
+  }
+  else if (port_b == mixer_ptr->port_auto_in)
+  {
+    return port_a;
+  }
+  else
+  {
+    // this connection had nothing to do with our 'auto' port
+    return NULL;
+  } 
+}
+
+
+/**
+ * Called whenever a port connection is made or broken. We want to act on 
+ * connections to our 'auto' port.
+ */
+void
+port_connection(jack_port_id_t a, jack_port_id_t b, int connect, void* context)
+{
+  const char * source_port_name; 
+  pthread_t thread;
+
+  // 'source_port' is the port connected to our 'auto' port
+  jack_port_t * source_port = port_connected_to_auto_in(a, b, context);
+ 
+  if (source_port == NULL || connect == 0)
+  {
+    return;
+  }
+  source_port_name = jack_port_name(source_port);
+
+  // fixing up the connections must be done in a seperate thread, causing 
+  // callbacks directly from a callback will cause trouble.
+  struct port_connection_thread_args * port_connection_args = (struct port_connection_thread_args *) 
+    malloc (sizeof(struct port_connection_thread_args));
+  port_connection_args->source_port_name = source_port_name;
+  port_connection_args->context = context;
+  pthread_create(&thread, NULL, port_connection_thread, (void*)port_connection_args);
+}
+
 static int
 process(
   jack_nframes_t nframes,
@@ -995,6 +1178,18 @@ create(
 
   calc_channel_volumes((struct channel*)mixer_ptr->main_mix_channel);
 
+  mixer_ptr->port_auto_in = jack_port_register(mixer_ptr->jack_client, "new mixer channel", JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0);
+  if (mixer_ptr->port_auto_in == NULL)
+  {
+    LOG_WARNING("Failed to register 'auto' port");
+  }
+  else
+  {
+    LOG_NOTICE("Registered 'auto' port");
+  }
+
+  ret = jack_set_port_connect_callback(mixer_ptr->jack_client, port_connection, mixer_ptr);
+
   ret = jack_set_process_callback(mixer_ptr->jack_client, process, mixer_ptr);
   if (ret != 0)
   {
@@ -1082,6 +1277,7 @@ add_channel(
   channel_ptr->mixer_ptr = mixer_ctx_ptr;
 
   channel_ptr->name = strdup(channel_name);
+
   if (channel_ptr->name == NULL)
   {
     goto fail_free_channel;
