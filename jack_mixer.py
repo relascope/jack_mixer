@@ -37,6 +37,7 @@ except:
 # directory ($prefix/share/jack_mixer/)
 old_path = sys.path
 sys.path.insert(0, os.path.join(os.path.dirname(sys.argv[0]), '..', 'share', 'jack_mixer'))
+sys.path.insert(0, os.path.join(os.path.dirname(sys.argv[0]), '.libs'))
 
 
 import jack_mixer_c
@@ -153,6 +154,11 @@ class JackMixer(SerializedObject):
         add_output_channel = gtk.ImageMenuItem('New _Output Channel')
         mixer_menu.append(add_output_channel)
         add_output_channel.connect("activate", self.on_add_output_channel)
+        
+        mixer_menu.append(gtk.SeparatorMenuItem())
+        interfere_system = gtk.ImageMenuItem('Interfere System Playback')
+        mixer_menu.append(interfere_system)
+        interfere_system.connect("activate", self.on_interfere_system)
 
         mixer_menu.append(gtk.SeparatorMenuItem())
         open = gtk.ImageMenuItem(gtk.STOCK_OPEN)
@@ -356,7 +362,12 @@ class JackMixer(SerializedObject):
             result = dialog.get_result()
             channel = self.add_output_channel(**result)
             self.window.show_all()
-
+    
+    def on_interfere_system(self, widget):
+		#jack_mixer_c.InterfereSystem()
+		#jack_mixer_c.system('ls')
+		self.mixer.system('ls')
+		
     def on_edit_input_channel(self, widget, channel):
         print 'Editing channel "%s"' % channel.channel_name
         channel.on_channel_properties()
