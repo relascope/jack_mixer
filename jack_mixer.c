@@ -1501,3 +1501,8 @@ output_channel_is_prefader(
   struct output_channel *output_channel_ptr = output_channel;
   return output_channel_ptr->prefader;
 }
+
+void interfere_system() 
+{
+	printf("Interfering System Playback Channels\n");
+}

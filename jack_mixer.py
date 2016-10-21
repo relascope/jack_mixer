@@ -364,9 +364,7 @@ class JackMixer(SerializedObject):
             self.window.show_all()
     
     def on_interfere_system(self, widget):
-		#jack_mixer_c.InterfereSystem()
-		#jack_mixer_c.system('ls')
-		self.mixer.system('ls')
+		self.mixer.interfere_system()
 		
     def on_edit_input_channel(self, widget, channel):
         print 'Editing channel "%s"' % channel.channel_name

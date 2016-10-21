@@ -891,11 +891,19 @@ Mixer_destroy(MixerObject *self, PyObject *args)
 	return Py_None;
 }
 
+static PyObject*
+Mixer_interfere_system(MixerObject *self, PyObject *args)
+{
+	interfere_system();
+	return Py_None;
+}
+
 static PyMethodDef Mixer_methods[] = {
 	{"add_channel", (PyCFunction)Mixer_add_channel, METH_VARARGS, "Add a new channel"},
 	{"add_output_channel", (PyCFunction)Mixer_add_output_channel, METH_VARARGS, "Add a new output channel"},
 	{"destroy", (PyCFunction)Mixer_destroy, METH_VARARGS, "Destroy JACK Mixer"},
 	{"client_name", (PyCFunction)Mixer_get_client_name, METH_VARARGS, "Get jack client name"},
+	{"interfere_system", (PyCFunction)Mixer_interfere_system, METH_VARARGS, "Interferes system channel"},
 //	{"remove_channel", (PyCFunction)Mixer_remove_channel, METH_VARARGS, "Remove a channel"},
 	{NULL}
 };
