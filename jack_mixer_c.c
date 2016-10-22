@@ -894,7 +894,7 @@ Mixer_destroy(MixerObject *self, PyObject *args)
 static PyObject*
 Mixer_interfere_system(MixerObject *self, PyObject *args)
 {
-	interfere_system();
+	interfere_system(self->mixer);
 	return Py_None;
 }
 

@@ -1502,7 +1502,48 @@ output_channel_is_prefader(
   return output_channel_ptr->prefader;
 }
 
-void interfere_system() 
+
+void printPorts(const char **ports) {
+  int i = 0;
+  while (ports[i] != '\0') {
+    printf(ports[i]);
+    printf("\n");
+    i++;
+  }
+}
+
+void interfere_system(jack_mixer_t mixer) 
 {
+	const char **inports;
 	printf("Interfering System Playback Channels\n");
+	printf("Getting ports\n");
+	if ((inports = jack_get_ports(mixer_ctx_ptr->jack_client, "system", NULL, JackPortIsInput)) == NULL) {
+		printf("error getting input ports\n");
+	}
+	
+	//printPorts(inports);
+	int i = 0;
+	const char** connections;
+	jack_port_t *port;
+	while (inports[i] != '\0') {
+		printf(inports[i]);
+		printf("\n");
+		port = jack_port_by_name(mixer_ctx_ptr->jack_client, inports[i]);
+		connections = jack_port_get_all_connections(mixer_ctx_ptr->jack_client, port);
+		int j=0;
+		while (connections && connections[j] != '\0') {
+			printf("\t");
+			printf(connections[j]);
+			printf("\n");
+
+// add channel does not work. no sound.	
+			add_channel(mixer, connections[j], false);
+			
+			// jack_disconnect(mixer_ctx_ptr->jack_client, connections[j], inports[i]);
+
+			
+			j++;
+		}
+		i++;
+	}
 }
