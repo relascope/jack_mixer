@@ -1512,38 +1512,45 @@ void printPorts(const char **ports) {
   }
 }
 
-void interfere_system(jack_mixer_t mixer) 
-{
+#define MAX_CONNECTIONS 48
+
+char** getSystemPortConnections(jack_mixer_t mixer) {
 	const char **inports;
-	printf("Interfering System Playback Channels\n");
-	printf("Getting ports\n");
+	const char **retval = malloc(sizeof(char*) * MAX_CONNECTIONS);
+	int count = 0;
 	if ((inports = jack_get_ports(mixer_ctx_ptr->jack_client, "system", NULL, JackPortIsInput)) == NULL) {
 		printf("error getting input ports\n");
 	}
 	
-	//printPorts(inports);
 	int i = 0;
 	const char** connections;
 	jack_port_t *port;
 	while (inports[i] != '\0') {
-		printf(inports[i]);
-		printf("\n");
 		port = jack_port_by_name(mixer_ctx_ptr->jack_client, inports[i]);
 		connections = jack_port_get_all_connections(mixer_ctx_ptr->jack_client, port);
 		int j=0;
 		while (connections && connections[j] != '\0') {
-			printf("\t");
-			printf(connections[j]);
-			printf("\n");
-
-// add channel does not work. no sound.	
-			add_channel(mixer, connections[j], false);
-			
-			// jack_disconnect(mixer_ctx_ptr->jack_client, connections[j], inports[i]);
-
-			
+			retval[count] = connections[j];
+			count++;
 			j++;
-		}
+		}		
 		i++;
 	}
+	
+	retval[count] = '\0';
+	return retval;
+}
+
+void interfere_system(jack_mixer_t mixer) 
+{
+	const char** connections = getSystemPortConnections(mixer);
+	
+	int count = 0;
+	while (connections[count] != '\0') {
+		printf(connections[count]);
+		printf("\n");
+		count++;
+	}
+	
+	return;
 }
