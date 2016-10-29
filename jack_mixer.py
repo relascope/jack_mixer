@@ -364,7 +364,18 @@ class JackMixer(SerializedObject):
             self.window.show_all()
     
     def on_interfere_system(self, widget):
+		print "Python interfering"
+                #connections = self.mixer.get_systemport_connections()
+		
+                #for conn in connections:
+                #	self.add_channel(conn, False, 0, 0)
+                #	print conn
+                #	print "\n"
+		
+                #self.window.show_all()
+                #connections = self.mixer.get_systemport_connections()
 		self.mixer.interfere_system()
+		
 		
     def on_edit_input_channel(self, widget, channel):
         print 'Editing channel "%s"' % channel.channel_name

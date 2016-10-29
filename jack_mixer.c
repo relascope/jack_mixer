@@ -1514,43 +1514,53 @@ void printPorts(const char **ports) {
 
 #define MAX_CONNECTIONS 48
 
-char** getSystemPortConnections(jack_mixer_t mixer) {
-	const char **inports;
-	const char **retval = malloc(sizeof(char*) * MAX_CONNECTIONS);
-	int count = 0;
-	if ((inports = jack_get_ports(mixer_ctx_ptr->jack_client, "system", NULL, JackPortIsInput)) == NULL) {
-		printf("error getting input ports\n");
-	}
+char** get_systemport_connections(jack_mixer_t mixer) {
+    const char **inports;
+    const char **retval = malloc(sizeof(char*) * MAX_CONNECTIONS);
+    int count = 0;
+    if ((inports = jack_get_ports(mixer_ctx_ptr->jack_client, "system", NULL, JackPortIsInput)) == NULL) {
+        printf("error getting input ports\n");
+    }
+
+    int i = 0;
+    const char** connections;
+    jack_port_t *port;
+    while (inports[i] != '\0') {
+        port = jack_port_by_name(mixer_ctx_ptr->jack_client, inports[i]);
+        connections = jack_port_get_all_connections(mixer_ctx_ptr->jack_client, port);
+        int j=0;
+        while (connections && connections[j] != '\0') {
+            retval[count] = connections[j];
+            count++;
+            j++;
+        }
+        i++;
+    }
+
+    retval[count] = '\0';
+
+    return retval;
+}
+
+void connect_Mixer(char* name) {
 	
-	int i = 0;
-	const char** connections;
-	jack_port_t *port;
-	while (inports[i] != '\0') {
-		port = jack_port_by_name(mixer_ctx_ptr->jack_client, inports[i]);
-		connections = jack_port_get_all_connections(mixer_ctx_ptr->jack_client, port);
-		int j=0;
-		while (connections && connections[j] != '\0') {
-			retval[count] = connections[j];
-			count++;
-			j++;
-		}		
-		i++;
-	}
-	
-	retval[count] = '\0';
-	return retval;
+}
+
+void remove_system_connection(char* name) {
 }
 
 void interfere_system(jack_mixer_t mixer) 
 {
-	const char** connections = getSystemPortConnections(mixer);
-	
-	int count = 0;
-	while (connections[count] != '\0') {
-		printf(connections[count]);
+    const char** connections = get_systemport_connections(mixer);
+	/*
+	int i = 0;
+	while (connections[i] != '\0') {
+		printf(connections[i]);
 		printf("\n");
-		count++;
-	}
+		//connect_Mixer(connections[i]);
+		//remove_system_connection(connections[i]);
+		i++;
+	}*/
 	
 	return;
 }

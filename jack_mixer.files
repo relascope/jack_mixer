@@ -1,0 +1,14 @@
+config.h
+jack_compat.h
+jack_mix_box.c
+jack_mixer.c
+jack_mixer.h
+jack_mixer_c.c
+list.h
+log.c
+log.h
+memory_atomic.c
+memory_atomic.h
+scale.c
+jack_mixer.py
+jack_mixer.py

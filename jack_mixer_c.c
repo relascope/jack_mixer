@@ -27,7 +27,6 @@
 
 #include "jack_mixer.h"
 
-
 /** Scale Type **/
 
 typedef struct {
@@ -891,12 +890,46 @@ Mixer_destroy(MixerObject *self, PyObject *args)
 	return Py_None;
 }
 
+PyObject *makelist(char* array[], size_t size) {
+    PyObject *l = PyList_New(size);
+    for (size_t i = 0; i != size; ++i) {
+        PyList_SET_ITEM(l, i, PyString_FromStringAndSize(array[i], strlen(array[i])));
+    }
+    return l;
+}
+
+PyObject *makeintlist(int array[], size_t size) {
+    PyObject *l = PyList_New(size);
+    for (size_t i = 0; i != size; ++i) {
+        PyList_SET_ITEM(l, i, PyInt_FromLong(array[i]));
+    }
+    return l;
+}
+
+int ArrSize(const char** array) {
+	int count = 0;
+	while (array[count] != '\0') {
+		count++;
+	}
+	return count;
+}
+
 static PyObject*
 Mixer_interfere_system(MixerObject *self, PyObject *args)
 {
-	interfere_system(self->mixer);
+	const char** conns;
+    interfere_system(self->mixer);
 	return Py_None;
 }
+
+static PyObject*
+Mixer_get_systemport_connections(MixerObject *self, PyObject *args)
+{
+	const char** conns;
+	conns = get_systemport_connections(self->mixer);
+	return (PyListObject*)makelist(conns, ArrSize(conns));
+}
+
 
 static PyMethodDef Mixer_methods[] = {
 	{"add_channel", (PyCFunction)Mixer_add_channel, METH_VARARGS, "Add a new channel"},
@@ -904,6 +937,7 @@ static PyMethodDef Mixer_methods[] = {
 	{"destroy", (PyCFunction)Mixer_destroy, METH_VARARGS, "Destroy JACK Mixer"},
 	{"client_name", (PyCFunction)Mixer_get_client_name, METH_VARARGS, "Get jack client name"},
 	{"interfere_system", (PyCFunction)Mixer_interfere_system, METH_VARARGS, "Interferes system channel"},
+	{"get_systemport_connections", (PyCFunction)Mixer_get_systemport_connections, METH_VARARGS, "Gets connections of the systemport"},
 //	{"remove_channel", (PyCFunction)Mixer_remove_channel, METH_VARARGS, "Remove a channel"},
 	{NULL}
 };
