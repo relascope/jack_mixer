@@ -365,15 +365,14 @@ class JackMixer(SerializedObject):
     
     def on_interfere_system(self, widget):
 		print "Python interfering"
-                #connections = self.mixer.get_systemport_connections()
+                connections = self.mixer.get_systemport_connections()
 		
-                #for conn in connections:
-                #	self.add_channel(conn, False, 0, 0)
-                #	print conn
-                #	print "\n"
+                for conn in connections:
+                        self.add_channel(conn, False, 0, 0)
+                        print conn
+                        print "\n"
 		
-                #self.window.show_all()
-                #connections = self.mixer.get_systemport_connections()
+                self.window.show_all()
 		self.mixer.interfere_system()
 		
 		
