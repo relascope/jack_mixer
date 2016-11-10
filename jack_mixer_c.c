@@ -936,7 +936,7 @@ static PyMethodDef Mixer_methods[] = {
 	{"add_output_channel", (PyCFunction)Mixer_add_output_channel, METH_VARARGS, "Add a new output channel"},
 	{"destroy", (PyCFunction)Mixer_destroy, METH_VARARGS, "Destroy JACK Mixer"},
 	{"client_name", (PyCFunction)Mixer_get_client_name, METH_VARARGS, "Get jack client name"},
-    {"interfere_system", (PyCFunction)Mixer_bridge_system, METH_VARARGS, "Bridges system channel"},
+    {"bridge_system", (PyCFunction)Mixer_bridge_system, METH_VARARGS, "Bridges system channel"},
 	{"get_systemport_connections", (PyCFunction)Mixer_get_systemport_connections, METH_VARARGS, "Gets connections of the systemport"},
 //	{"remove_channel", (PyCFunction)Mixer_remove_channel, METH_VARARGS, "Remove a channel"},
 	{NULL}
