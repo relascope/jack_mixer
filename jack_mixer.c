@@ -1552,26 +1552,47 @@ char** get_systemport_connections(jack_mixer_t mixer) {
     return retval;
 }
 
-void connect_Mixer(jack_mixer_t mixer, char* name) {
+void connect_Mixer(jack_mixer_t mixer, char* port_name) {
     const char* client_name = jack_get_client_name(mixer_ctx_ptr->jack_client);
-    const char* port_name = malloc(sizeof(char) * (strlen(name) + strlen(client_name) + 1));
-    strcpy(port_name, client_name);
-    strcat(port_name, ":");
-    strcat(port_name, name);
+    const char* mixer_port_name = malloc(sizeof(char) * (strlen(port_name) + strlen(client_name) + 1));
+    strcpy(mixer_port_name, client_name);
+    strcat(mixer_port_name, ":");
+    strcat(mixer_port_name, port_name);
 
-    if (jack_connect(mixer_ctx_ptr->jack_client, name, port_name) != 0) {
-        printf("Port connection failed. \n");
+    if (jack_connect(mixer_ctx_ptr->jack_client, port_name, mixer_port_name) != 0) {
+        printf("Port connection failed. %s to %s \n", port_name, mixer_port_name);
     }
 }
 
-void remove_system_connection(jack_mixer_t mixer, char* name) {
+void connect_Out_Ports(jack_mixer_t mixer, char* port_name) {
+    // get mixer port
+    const char* client_name = jack_get_client_name(mixer_ctx_ptr->jack_client);
+    const char* mixer_port_name = malloc(sizeof(char) * (strlen(port_name) + strlen(client_name) + strlen(" Out") + 1));
+    strcpy(mixer_port_name, client_name);
+    strcat(mixer_port_name, ":");
+    strcat(mixer_port_name, port_name);
+    strcat(mixer_port_name, " Out");
+
+    // get connected systemport
+    jack_port_t *port = jack_port_by_name(mixer_ctx_ptr->jack_client, port_name);
+    const char** connections = jack_port_get_all_connections(mixer_ctx_ptr->jack_client, port);
+    for (int i=0; connections[i] != '\0'; i++) {
+        if (startsWith("system", connections[i])) {
+            if (jack_connect(mixer_ctx_ptr->jack_client, mixer_port_name, connections[i]) != 0) {
+                printf("Port connection failed. %s to %s \n", mixer_port_name, connections[i]);
+            }
+        }
+    }
+}
+
+void remove_system_connection(jack_mixer_t mixer, char* port_name) {
     const char** connections;
-    jack_port_t *port = jack_port_by_name(mixer_ctx_ptr->jack_client, name);
+    jack_port_t *port = jack_port_by_name(mixer_ctx_ptr->jack_client, port_name);
     connections = jack_port_get_all_connections(mixer_ctx_ptr->jack_client, port);
     int i=0;
     while (connections[i] != '\0') {
         if (startsWith("system", connections[i])) {
-            if (jack_disconnect(mixer_ctx_ptr->jack_client, name, connections[i]) != 0) {
+            if (jack_disconnect(mixer_ctx_ptr->jack_client, port_name, connections[i]) != 0) {
                 printf("Port disconnection failed. \n");
             }
         }
@@ -1586,6 +1607,7 @@ void bridge_system(jack_mixer_t mixer)
     int i = 0;
 	while (connections[i] != '\0') {
         connect_Mixer(mixer, connections[i]);
+        connect_Out_Ports(mixer, connections[i]);
         remove_system_connection(mixer, connections[i]);
 		i++;
     }
