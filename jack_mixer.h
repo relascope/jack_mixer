@@ -259,6 +259,6 @@ bool
 output_channel_is_prefader(
   jack_mixer_output_channel_t output_channel);
   
-void interfere_system(jack_mixer_t mixer);
+void bridge_system(jack_mixer_t mixer);
 
 #endif /* #ifndef JACK_MIXER_H__DAEB51D8_5861_40F2_92E4_24CA495A384D__INCLUDED */

@@ -1579,7 +1579,7 @@ void remove_system_connection(jack_mixer_t mixer, char* name) {
     }
 }
 
-void interfere_system(jack_mixer_t mixer) 
+void bridge_system(jack_mixer_t mixer)
 {
     const char** connections = get_systemport_connections(mixer);
 

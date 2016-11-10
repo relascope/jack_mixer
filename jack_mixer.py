@@ -156,9 +156,9 @@ class JackMixer(SerializedObject):
         add_output_channel.connect("activate", self.on_add_output_channel)
         
         mixer_menu.append(gtk.SeparatorMenuItem())
-        interfere_system = gtk.ImageMenuItem('Interfere System Playback')
-        mixer_menu.append(interfere_system)
-        interfere_system.connect("activate", self.on_interfere_system)
+        bridge_system = gtk.ImageMenuItem('Bridge System Playback')
+        mixer_menu.append(bridge_system)
+        bridge_system.connect("activate", self.on_bridge_system)
 
         mixer_menu.append(gtk.SeparatorMenuItem())
         open = gtk.ImageMenuItem(gtk.STOCK_OPEN)
@@ -363,8 +363,7 @@ class JackMixer(SerializedObject):
             channel = self.add_output_channel(**result)
             self.window.show_all()
     
-    def on_interfere_system(self, widget):
-		print "Python interfering"
+    def on_bridge_system(self, widget):
                 connections = self.mixer.get_systemport_connections()
 		
                 for conn in connections:
@@ -373,7 +372,7 @@ class JackMixer(SerializedObject):
                         print "\n"
 		
                 self.window.show_all()
-		self.mixer.interfere_system()
+                self.mixer.bridge_system()
 		
 		
     def on_edit_input_channel(self, widget, channel):

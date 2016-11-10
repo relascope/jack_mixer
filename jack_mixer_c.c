@@ -915,10 +915,10 @@ int ArrSize(const char** array) {
 }
 
 static PyObject*
-Mixer_interfere_system(MixerObject *self, PyObject *args)
+Mixer_bridge_system(MixerObject *self, PyObject *args)
 {
 	const char** conns;
-    interfere_system(self->mixer);
+    bridge_system(self->mixer);
 	return Py_None;
 }
 
@@ -936,7 +936,7 @@ static PyMethodDef Mixer_methods[] = {
 	{"add_output_channel", (PyCFunction)Mixer_add_output_channel, METH_VARARGS, "Add a new output channel"},
 	{"destroy", (PyCFunction)Mixer_destroy, METH_VARARGS, "Destroy JACK Mixer"},
 	{"client_name", (PyCFunction)Mixer_get_client_name, METH_VARARGS, "Get jack client name"},
-	{"interfere_system", (PyCFunction)Mixer_interfere_system, METH_VARARGS, "Interferes system channel"},
+    {"interfere_system", (PyCFunction)Mixer_bridge_system, METH_VARARGS, "Bridges system channel"},
 	{"get_systemport_connections", (PyCFunction)Mixer_get_systemport_connections, METH_VARARGS, "Gets connections of the systemport"},
 //	{"remove_channel", (PyCFunction)Mixer_remove_channel, METH_VARARGS, "Remove a channel"},
 	{NULL}
