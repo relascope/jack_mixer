@@ -26,6 +26,8 @@ import gobject
 import sys
 import os
 import signal
+import re
+
 
 try:
     import lash
@@ -362,17 +364,60 @@ class JackMixer(SerializedObject):
             result = dialog.get_result()
             channel = self.add_output_channel(**result)
             self.window.show_all()
-    
+
+    @staticmethod
+    def remove_last_digit(mystr):
+        digits = re.findall(r'\d+', mystr)
+        lastdigit = digits[len(digits)-1]
+        return mystr[:-len(str(lastdigit))]
+
     def on_bridge_system(self, widget):
                 connections = self.mixer.get_systemport_connections()
-		
-                for conn in connections:
-                        self.add_channel(conn, False, 0, 0)
-                        print conn
-                        print "\n"
+
+                #check for stereo channel
+                for i in range(0, len(connections)):
+                    act = connections[i]
+                    actNoDigit = self.remove_last_digit(act)
+
+                    print "act: " + act + "\n"
+
+                    channelExists = False
+                    for c in range(len(self.channels)):
+                        if self.channels[c].channel_name == act or self.channels[c].channel_name == actNoDigit:
+                            print "Channel " + self.channels[c].channel_name + " already exists"
+                            channelExists = True
+                            break
+
+                    if channelExists:
+                        continue
+
+                    sameConnectionCount = 1
+                    for j in range(i+1, len(connections)):
+                        print "testing " + connections[j] + "\n"
+                        if self.remove_last_digit(connections[j]) == actNoDigit:
+                            print "FOUND\n"
+                            sameConnectionCount+=1
+
+                    if sameConnectionCount == 2:
+                        print "STEREO\n"
+                        stereo = True
+                    else:
+                        stereo = False
+                        print "MONO\n"
+
+                    if stereo:
+                        name = actNoDigit
+                    else:
+                        name = act
+                    self.add_channel(name, stereo, 0, 0)
+
+
+
+                #for conn in connections:
+                #        self.add_channel(conn, False, 0, 0)
 		
                 self.window.show_all()
-                self.mixer.bridge_system()
+                #self.mixer.bridge_system()
 		
 		
     def on_edit_input_channel(self, widget, channel):
