@@ -1552,15 +1552,101 @@ char** get_systemport_connections(jack_mixer_t mixer) {
     return retval;
 }
 
-void connect_Mixer(jack_mixer_t mixer, char* port_name) {
+bool is_Stereo(jack_mixer_t mixer, char* port_name) {
     const char* client_name = jack_get_client_name(mixer_ctx_ptr->jack_client);
-    const char* mixer_port_name = malloc(sizeof(char) * (strlen(port_name) + strlen(client_name) + 1));
+    const char* mixer_port_name = malloc(sizeof(char) * (strlen(port_name) + strlen(client_name) + 1 + strlen(" Out L")));
+    bool left = false, right = false;
+
     strcpy(mixer_port_name, client_name);
     strcat(mixer_port_name, ":");
     strcat(mixer_port_name, port_name);
+    strcat(mixer_port_name, " Out L");
 
-    if (jack_connect(mixer_ctx_ptr->jack_client, port_name, mixer_port_name) != 0) {
-        printf("Port connection failed. %s to %s \n", port_name, mixer_port_name);
+    left = (jack_port_by_name(mixer_ctx_ptr->jack_client, mixer_port_name) == NULL);
+
+    strcpy(mixer_port_name, client_name);
+    strcat(mixer_port_name, ":");
+    strcat(mixer_port_name, port_name);
+    strcat(mixer_port_name, " Out R");
+
+    right = (jack_port_by_name(mixer_ctx_ptr->jack_client, mixer_port_name) == NULL);
+
+    return left && right;
+}
+
+char* remove_last_digit(const char* str) {
+    int len = strlen(str);
+    int count;
+    for (count=len-1; count>=0; count--) {
+        if (!isdigit(str[count]))
+            break;
+    }
+
+    char* result = malloc(sizeof(char) * count);
+
+    for (int j=0; j<=count; j++) {
+        result[j] = str[j];
+    }
+
+    return result;
+}
+
+const char** get_first_free_mixer_port(jack_mixer_t mixer, const char* port_name) {
+    const char* client_name = jack_get_client_name(mixer_ctx_ptr->jack_client);
+    const char* mixer_port_name = malloc(sizeof(char) * (strlen(port_name) + strlen(client_name) + 1 + strlen(" Out L")));
+    const char** connections;
+    const char* port_no_digit = remove_last_digit(port_name);
+
+    jack_port_t *port;
+
+    bool left = false, right = false;
+
+    strcpy(mixer_port_name, client_name);
+    strcat(mixer_port_name, ":");
+    strcat(mixer_port_name, port_no_digit);
+    strcat(mixer_port_name, " Out L");
+
+    port = jack_port_by_name(mixer_ctx_ptr->jack_client, mixer_port_name);
+    connections = jack_port_get_all_connections(mixer_ctx_ptr->jack_client, port);
+
+    if (connections && connections[0] != '\0') {
+        return mixer_port_name;
+    }
+
+    strcpy(mixer_port_name, client_name);
+    strcat(mixer_port_name, ":");
+    strcat(mixer_port_name, port_no_digit);
+    strcat(mixer_port_name, " Out R");
+
+    port = jack_port_by_name(mixer_ctx_ptr->jack_client, mixer_port_name);
+    connections = jack_port_get_all_connections(mixer_ctx_ptr->jack_client, port);
+
+    if (connections && connections[0] != '\0') {
+        return mixer_port_name;
+    }
+
+    return NULL;
+}
+
+void connect_Mixer(jack_mixer_t mixer, char* port_name) {
+    const char* client_name = jack_get_client_name(mixer_ctx_ptr->jack_client);
+
+    if (is_Stereo(mixer, port_name)) {
+        const char** port;
+        if ((port = get_first_free_mixer_port(mixer, port_name)) == NULL) {
+            printf("NO PORT FOUND FOR %s\n", port_name);
+        }
+        if (jack_connect(mixer_ctx_ptr->jack_client, port_name, port) != 0) {
+            printf("Port connection failed. %s to %s \n", port_name, port);
+        }
+    } else {
+        const char* mixer_port_name = malloc(sizeof(char) * (strlen(port_name) + strlen(client_name) + 1));
+        strcpy(mixer_port_name, client_name);
+        strcat(mixer_port_name, ":");
+        strcat(mixer_port_name, port_name);
+        if (jack_connect(mixer_ctx_ptr->jack_client, port_name, mixer_port_name) != 0) {
+            printf("Port connection failed. %s to %s \n", port_name, mixer_port_name);
+        }
     }
 }
 
@@ -1602,13 +1688,20 @@ void remove_system_connection(jack_mixer_t mixer, char* port_name) {
 
 void bridge_system(jack_mixer_t mixer)
 {
+    // MIXER PORT NOT FOUND, may error in remove_last_digit
+    printf("TEST_1 %s\n", remove_last_digit("TEST_1"));
+    printf("TEST 1 %s\n", remove_last_digit("TEST 1"));
+    printf("TEST:out 1 %s\n", remove_last_digit("TEST:out 1"));
+
+    printf("%s:%d\n", __FILE__, __LINE__);
+
     const char** connections = get_systemport_connections(mixer);
 
     int i = 0;
-	while (connections[i] != '\0') {
+    while (connections[i] != '\0') {
         connect_Mixer(mixer, connections[i]);
         connect_Out_Ports(mixer, connections[i]);
-        remove_system_connection(mixer, connections[i]);
+//        remove_system_connection(mixer, connections[i]);
 		i++;
     }
 }
