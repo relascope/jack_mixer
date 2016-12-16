@@ -1686,6 +1686,14 @@ void remove_system_connection(jack_mixer_t mixer, char* port_name) {
     }
 }
 
+void connect_ports(jack_mixer_t mixer, const char* src, const char* destination) {
+    printf("%s to %s\n", src, destination);
+    if (jack_connect(mixer_ctx_ptr->jack_client, src, destination) != 0) {
+        printf("Port connection failed. %s to %s \n", src, destination);
+    }
+
+}
+
 void bridge_system(jack_mixer_t mixer)
 {
     // MIXER PORT NOT FOUND, may error in remove_last_digit

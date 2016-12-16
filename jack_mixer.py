@@ -371,7 +371,7 @@ class JackMixer(SerializedObject):
         lastdigit = digits[len(digits)-1]
         return mystr[:-len(str(lastdigit))]
 
-    def on_bridge_system(self, widget):
+    def on_bridge_system(self, widget):              
                 connections = self.mixer.get_systemport_connections()
 
                 #check for stereo channel
@@ -406,8 +406,11 @@ class JackMixer(SerializedObject):
 
                     self.add_channel(name, stereo, 0, 0)
 
+                    if not stereo:
+                        self.mixer.connect_ports(act, self.mixer.client_name() + ':' + name)
+
                 self.window.show_all()
-                self.mixer.bridge_system()
+                #self.mixer.bridge_system()
 		
 		
     def on_edit_input_channel(self, widget, channel):

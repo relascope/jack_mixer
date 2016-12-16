@@ -930,6 +930,22 @@ Mixer_get_systemport_connections(MixerObject *self, PyObject *args)
 	return (PyListObject*)makelist(conns, ArrSize(conns));
 }
 
+static PyObject*
+Mixer_connect_ports(MixerObject *self, PyObject *args)
+{
+    const char* src;
+    const char* destination;
+
+    if (!PyArg_ParseTuple(args, "ss", &src, &destination))
+    {
+        printf("arg not found\n");
+        return;
+    }
+
+    connect_ports(self->mixer, src, destination);
+    return Py_None;
+}
+
 
 static PyMethodDef Mixer_methods[] = {
 	{"add_channel", (PyCFunction)Mixer_add_channel, METH_VARARGS, "Add a new channel"},
@@ -938,6 +954,7 @@ static PyMethodDef Mixer_methods[] = {
 	{"client_name", (PyCFunction)Mixer_get_client_name, METH_VARARGS, "Get jack client name"},
     {"bridge_system", (PyCFunction)Mixer_bridge_system, METH_VARARGS, "Bridges system channel"},
 	{"get_systemport_connections", (PyCFunction)Mixer_get_systemport_connections, METH_VARARGS, "Gets connections of the systemport"},
+    {"connect_ports", (PyCFunction)Mixer_connect_ports, METH_VARARGS, "Connects two ports"},
 //	{"remove_channel", (PyCFunction)Mixer_remove_channel, METH_VARARGS, "Remove a channel"},
 	{NULL}
 };
