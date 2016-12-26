@@ -374,6 +374,10 @@ class JackMixer(SerializedObject):
     def on_bridge_system(self, widget):              
                 connections = self.mixer.get_systemport_connections()
 
+                #printConnections
+                for conn in connections:
+                    print '::: ' + conn
+
                 #check for stereo channel
                 for i in range(0, len(connections)):
                     channelExists = False
@@ -386,11 +390,8 @@ class JackMixer(SerializedObject):
                             channelExists = True
                             break
 
-                    if channelExists:
-                        break
-
-                    sameConnectionCount = 1
-                    for j in range(i+1, len(connections)):
+                    sameConnectionCount = 0
+                    for j in range(0, len(connections)):
                         if self.remove_last_digit(connections[j]) == actNoDigit:
                             sameConnectionCount+=1
 
@@ -404,10 +405,28 @@ class JackMixer(SerializedObject):
                     else:
                         name = act
 
-                    self.add_channel(name, stereo, 0, 0)
+                    if not channelExists:
+                        self.add_channel(name, stereo, 0, 0)
 
                     if not stereo:
                         self.mixer.connect_ports(act, self.mixer.client_name() + ':' + name)
+                        system_port_connections = self.mixer.get_port_system_connections(act)
+                        for j in range(0, len(system_port_connections)):
+                            self.mixer.connect_ports(self.mixer.client_name() + ':' + name + ' Out', system_port_connections[j])
+                            self.mixer.disconnect_ports(act, system_port_connections[j])
+                    #connect stereo ports
+                    else:
+                        system_port_connections = self.mixer.get_port_system_connections(act)
+                        for j in range(0, len(system_port_connections)):
+                            print act + ' connected to ' + system_port_connections[j] + '\n'
+                            if channelExists:
+                                self.mixer.connect_ports(act, self.mixer.client_name() + ':' + name + ' R')
+                                self.mixer.connect_ports(self.mixer.client_name() + ':' + name + ' Out R', system_port_connections[j])
+                            else:
+                                self.mixer.connect_ports(act, self.mixer.client_name() + ':' + name + ' L')
+                                self.mixer.connect_ports(self.mixer.client_name() + ':' + name + ' Out L', system_port_connections[j])
+
+                            self.mixer.disconnect_ports(act, system_port_connections[j])
 
                 self.window.show_all()
                 #self.mixer.bridge_system()
