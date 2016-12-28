@@ -261,4 +261,22 @@ output_channel_is_prefader(
   
 void bridge_system(jack_mixer_t mixer);
 
+const char**
+get_port_system_connections(
+  jack_mixer_t mixer, const char *port_name);
+
+const char**
+get_systemport_connections(
+  jack_mixer_t mixer);
+
+void
+connect_ports(
+  jack_mixer_t mixer, const char* src,
+  const char* destination);
+
+void
+disconnect_ports(
+  jack_mixer_t mixer,
+  const char *src, const char *destination);
+
 #endif /* #ifndef JACK_MIXER_H__DAEB51D8_5861_40F2_92E4_24CA495A384D__INCLUDED */

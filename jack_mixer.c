@@ -1521,7 +1521,7 @@ bool startsWith(const char *pre, const char *str)
 
 #define MAX_CONNECTIONS 48
 
-char** get_systemport_connections(jack_mixer_t mixer) {
+const char** get_systemport_connections(jack_mixer_t mixer) {
     const char **inports;
     const char **retval = malloc(sizeof(char*) * MAX_CONNECTIONS);
     const char* client_name = jack_get_client_name(mixer_ctx_ptr->jack_client);

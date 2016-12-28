@@ -890,7 +890,9 @@ Mixer_destroy(MixerObject *self, PyObject *args)
 	return Py_None;
 }
 
-PyObject *makelist(char* array[], size_t size) {
+PyObject*
+makelist(const char* array[], size_t size)
+{
     PyObject *l = PyList_New(size);
     for (size_t i = 0; i != size; ++i) {
         PyList_SET_ITEM(l, i, PyString_FromStringAndSize(array[i], strlen(array[i])));
@@ -898,7 +900,9 @@ PyObject *makelist(char* array[], size_t size) {
     return l;
 }
 
-PyObject *makeintlist(int array[], size_t size) {
+PyObject*
+makeintlist(int array[], size_t size)
+{
     PyObject *l = PyList_New(size);
     for (size_t i = 0; i != size; ++i) {
         PyList_SET_ITEM(l, i, PyInt_FromLong(array[i]));
@@ -906,7 +910,9 @@ PyObject *makeintlist(int array[], size_t size) {
     return l;
 }
 
-int NullterminatedArrSize(const char** array) {
+int
+NullterminatedArrSize(const char** array)
+{
 	int count = 0;
 	while (array[count] != '\0') {
 		count++;
@@ -915,19 +921,11 @@ int NullterminatedArrSize(const char** array) {
 }
 
 static PyObject*
-Mixer_bridge_system(MixerObject *self, PyObject *args)
-{
-	const char** conns;
-    bridge_system(self->mixer);
-	return Py_None;
-}
-
-static PyObject*
 Mixer_get_systemport_connections(MixerObject *self, PyObject *args)
 {
 	const char** conns;
 	conns = get_systemport_connections(self->mixer);
-    return (PyListObject*)makelist(conns, NullterminatedArrSize(conns));
+    return (PyObject*)(PyListObject*)makelist(conns, NullterminatedArrSize(conns));
 }
 
 static PyObject*
@@ -939,10 +937,11 @@ Mixer_get_port_system_connections(MixerObject *self, PyObject *args)
     if (!PyArg_ParseTuple(args, "s", &port))
     {
         printf("arg not found\n");
+        return NULL;
     }
 
     conns = get_port_system_connections(self->mixer, port);
-    return (PyListObject*)makelist(conns, NullterminatedArrSize(conns));
+    return (PyObject*)(PyListObject*)makelist(conns, NullterminatedArrSize(conns));
 }
 
 static PyObject*
@@ -954,7 +953,7 @@ Mixer_connect_ports(MixerObject *self, PyObject *args)
     if (!PyArg_ParseTuple(args, "ss", &src, &destination))
     {
         printf("arg not found\n");
-        return Py_None;
+        return NULL;
     }
 
     connect_ports(self->mixer, src, destination);
@@ -970,7 +969,7 @@ Mixer_disconnect_ports(MixerObject *self, PyObject *args)
     if (!PyArg_ParseTuple(args, "ss", &src, &destination))
     {
         printf("arg not found\n");
-        return Py_None;
+        return NULL;
     }
 
     disconnect_ports(self->mixer, src, destination);
@@ -982,7 +981,6 @@ static PyMethodDef Mixer_methods[] = {
 	{"add_output_channel", (PyCFunction)Mixer_add_output_channel, METH_VARARGS, "Add a new output channel"},
 	{"destroy", (PyCFunction)Mixer_destroy, METH_VARARGS, "Destroy JACK Mixer"},
 	{"client_name", (PyCFunction)Mixer_get_client_name, METH_VARARGS, "Get jack client name"},
-    {"bridge_system", (PyCFunction)Mixer_bridge_system, METH_VARARGS, "Bridges system channel"},
 	{"get_systemport_connections", (PyCFunction)Mixer_get_systemport_connections, METH_VARARGS, "Gets connections of the systemport"},
     {"get_port_system_connections", (PyCFunction)Mixer_get_port_system_connections, METH_VARARGS, "Gets the connections of the port to system ports"},
     {"connect_ports", (PyCFunction)Mixer_connect_ports, METH_VARARGS, "Connects two ports"},
