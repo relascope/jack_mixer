@@ -368,6 +368,9 @@ class JackMixer(SerializedObject):
     @staticmethod
     def remove_last_digit(mystr):
         digits = re.findall(r'\d+', mystr)
+        if len(digits) == 0:
+            return mystr
+
         lastdigit = digits[len(digits)-1]
         return mystr[:-len(str(lastdigit))]
 
@@ -385,7 +388,14 @@ class JackMixer(SerializedObject):
                             channelExists = True
                             break
 
-                    # search for other channels => possible stereo
+                    lastChar = actConnection[len(actConnection) -1]
+                    if lastChar == 'R' or lastChar == 'r' or lastChar == 'L' or lastChar == 'l':
+                        for c in range(len(self.channels)):
+                            if self.channels[c].channel_name == actConnection[:-1]:
+                                channelExists = True
+                                break
+
+                    # search for other ports => possible stereo
                     sameConnectionCount = 0
                     for j in range(0, len(connections)):
                         if self.remove_last_digit(connections[j]) == actConnectionNoDigit:
@@ -397,13 +407,30 @@ class JackMixer(SerializedObject):
                         name = actConnectionNoDigit
                     else:
                         name = actConnection
+                        # search for 'L' - 'R' paired stereo
+                        if actConnection[len(actConnection)-1] == 'L' or actConnection[len(actConnection)-1] == 'l':
+                            for j in range(0, len(connections)):
+                                if connections[j] == actConnection[:-1] + 'R' or connections[j] == actConnection[:-1] + 'r':
+                                    name = actConnection[:-1]
+                                    stereo = True
+                                    break
+
+                        else:
+                            if actConnection[len(actConnection)-1] == 'R' or actConnection[len(actConnection)-1] == 'r':
+                                for j in range(0, len(connections)):
+                                    if connections[j] == actConnection[:-1] + 'L' or connections[j] == actConnection[:-1] + 'l':
+                                        name = actConnection[:-1]
+                                        stereo = True
+                                        break
+
+
 
                     if not channelExists:
                         self.add_channel(name, stereo, 0, 0)
 
                     # connect and disconnect (bridge) ports
                     if not stereo:
-                        self.mixer.connect_ports(act, self.mixer.client_name() + ':' + name)
+                        self.mixer.connect_ports(actConnection, self.mixer.client_name() + ':' + name)
                         system_port_connections = self.mixer.get_port_system_connections(actConnection)
                         for k in range(0, len(system_port_connections)):
                             self.mixer.connect_ports(self.mixer.client_name() + ':' + name + ' Out', system_port_connections[k])
