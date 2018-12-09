@@ -895,7 +895,8 @@ makelist(const char* array[], size_t size)
 {
     PyObject *l = PyList_New(size);
     for (size_t i = 0; i != size; ++i) {
-        PyList_SET_ITEM(l, i, PyString_FromStringAndSize(array[i], strlen(array[i])));
+        // PyList_SET_ITEM(l, i, PyString_FromStringAndSize(array[i], strlen(array[i])));
+        PyList_SET_ITEM(l, i, PyString_FromString(array[i]));
     }
     return l;
 }
@@ -923,15 +924,27 @@ NullterminatedArrSize(const char** array)
 static PyObject*
 Mixer_get_systemport_connections(MixerObject *self, PyObject *args)
 {
+    printf("Log [%s:%d in %s]\n",__FILE__,__LINE__,__FUNCTION__);
+
     const char** conns;
     conns = get_systemport_connections(self->mixer);
-    // BUG corrupted list
-    return (PyObject*)(PyListObject*)makelist(conns, NullterminatedArrSize(conns));
+
+    PyObject * ret = (PyObject*)(PyListObject*)makelist(conns, NullterminatedArrSize(conns));
+
+    int count = 0;
+    while (conns[count] != '\0')
+        free(conns[count++]);
+
+    free(conns);
+
+    return ret;
 }
 
 static PyObject*
 Mixer_get_port_system_connections(MixerObject *self, PyObject *args)
 {
+    printf("Log [%s:%d in %s]\n",__FILE__,__LINE__,__FUNCTION__);
+
     const char** conns;
     const char* port;
 
@@ -942,7 +955,18 @@ Mixer_get_port_system_connections(MixerObject *self, PyObject *args)
     }
 
     conns = get_port_system_connections(self->mixer, port);
-    return (PyObject*)(PyListObject*)makelist(conns, NullterminatedArrSize(conns));
+
+    PyObject* ret = (PyObject*)(PyListObject*)makelist(conns, NullterminatedArrSize(conns));
+
+
+    int count = 0;
+
+    while (conns[count] != '\0')
+        free(conns[count++]);
+
+    free(conns);
+
+    return ret;
 }
 
 static PyObject*

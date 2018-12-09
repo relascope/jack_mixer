@@ -1512,6 +1512,9 @@ bool startsWith(const char *pre, const char *str)
 #define MAX_CONNECTIONS 48
 
 const char** get_systemport_connections(jack_mixer_t mixer) {
+
+    printf("Log [%s:%d in %s]\n",__FILE__,__LINE__,__FUNCTION__);
+
     const char **inports;
     const char* client_name = jack_get_client_name(mixer_ctx_ptr->jack_client);
     if ((inports = jack_get_ports(mixer_ctx_ptr->jack_client, "system", NULL, JackPortIsInput)) == NULL) {
@@ -1520,48 +1523,67 @@ const char** get_systemport_connections(jack_mixer_t mixer) {
 
     int count = 0;
 
-    while (inports[count++] != '\0');
-
-    const char **retval = malloc(sizeof(char*) * count);
-
     int i = 0;
     const char** connections;
     jack_port_t *port;
 
-    count = 0;
+    char **retval = malloc(sizeof(char*) * count);
+
     while (inports[i] != '\0') {
         port = jack_port_by_name(mixer_ctx_ptr->jack_client, inports[i]);
         connections = jack_port_get_all_connections(mixer_ctx_ptr->jack_client, port);
         int j=0;
         while (connections && connections[j] != '\0') {
             if (!startsWith(client_name, connections[j])) {
-                retval[count] = connections[j];
+
+                retval = realloc(retval, sizeof(char*) * (count + 2)); // 1 one '\0', 1 behind
+
+                retval[count] = malloc(strlen(connections[j]) + 1);
+                strcpy(retval[count], connections[j]);
                 count++;
             }
             j++;
         }
         i++;
+
+        jack_free(connections);
     }
     retval[count] = '\0';
+
+    jack_free(inports);
 
     return retval;
 }
 
 const char **get_port_system_connections(jack_mixer_t mixer, const char *port_name) {
+    printf("Log [%s:%d in %s]\n",__FILE__,__LINE__,__FUNCTION__);
+
     const char **connections;
     jack_port_t *port = jack_port_by_name(mixer_ctx_ptr->jack_client, port_name);
     connections = jack_port_get_all_connections(mixer_ctx_ptr->jack_client, port);
     int i=0;
     int count = 0;
-    const char **system_connections = malloc(sizeof(connections));
+
+    while (connections[count] != '\0') {
+        count++;
+    }
+
+    const char **system_connections = malloc(sizeof(char*) * (count + 1));
+
+    count = 0;
     while (connections[i] != '\0') {
         if (startsWith("system", connections[i])) {
-            system_connections[count++] = connections[i];
+            system_connections[count] = malloc(strlen(connections[i]) +1);
+            printf("Log [%s:%d in %s]\n",__FILE__,__LINE__,__FUNCTION__);
+
+            strcpy(system_connections[count++], connections[i]);
         }
         ++i;
     }
 
     system_connections[count] = '\0';
+
+    jack_free(connections);
 
     return system_connections;
 }
