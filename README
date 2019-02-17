@@ -10,6 +10,9 @@ It is licensed under GPL version 2 (or later), check COPYING for more info.
 Please visit project homepage is at http://home.gna.org/jackmixer/ for more
 info.
 
+This Repo is a fork with one additional functionality implemented
+"Bridge System Playback" interferes each connection to a physical playback
+with an intermediate Mixer Track. 
 
 Installation
 ------------
