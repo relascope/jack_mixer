@@ -3,7 +3,11 @@ FROM gcc:7
 RUN apt-get -y update
 RUN apt-get -y install apt-utils sudo
 
+# Build requirements
 RUN apt-get -y install python-fpconst python-gtk2 python-dev libjack-jackd2-dev
+
+# Runtime requirements
+RUN apt-get install -y jackd2
 
 # User Management for Display
 # Replace with your user / group id
