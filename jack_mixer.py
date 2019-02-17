@@ -106,6 +106,11 @@ class JackMixer(SerializedObject):
     # name of settngs file that is currently open
     current_filename = None
 
+    # automatically bridged channels
+    bridged_connection = list()
+    unbridged_connection = list()
+    bridged_channel = list()
+
     def __init__(self, name, lash_client):
         self.mixer = jack_mixer_c.Mixer(name)
         if not self.mixer:
@@ -161,6 +166,10 @@ class JackMixer(SerializedObject):
         bridge_system = gtk.ImageMenuItem('Bridge System Playback')
         mixer_menu.append(bridge_system)
         bridge_system.connect("activate", self.on_bridge_system)
+
+        unbridge_system = gtk.ImageMenuItem('Unbridge System Playback')
+        mixer_menu.append(unbridge_system)
+        unbridge_system.connect("activate", self.on_unbridge_system)
 
         mixer_menu.append(gtk.SeparatorMenuItem())
         open = gtk.ImageMenuItem(gtk.STOCK_OPEN)
@@ -332,6 +341,7 @@ class JackMixer(SerializedObject):
         dlg.destroy()
 
     def on_quit_cb(self, *args):
+        self.on_unbridge_system()
         gtk.main_quit()
 
     preferences_dialog = None
@@ -375,80 +385,107 @@ class JackMixer(SerializedObject):
         return mystr[:-len(str(lastdigit))]
 
     def on_bridge_system(self, widget):              
-                connections = self.mixer.get_systemport_connections()
+        connections = self.mixer.get_systemport_connections()
 
-                for i in range(0, len(connections)):
-                    actConnection = connections[i]
-                    actConnectionNoDigit = self.remove_last_digit(actConnection)
+        for i in range(0, len(connections)):
+            actConnection = connections[i]
+            actConnectionNoDigit = self.remove_last_digit(actConnection)
 
-                    # search if channel exists
-                    channelExists = False
-                    for c in range(len(self.channels)):
-                        if self.channels[c].channel_name == actConnection or self.channels[c].channel_name == actConnectionNoDigit:
-                            channelExists = True
+            # search if channel exists
+            channelExists = False
+            for c in range(len(self.channels)):
+                if self.channels[c].channel_name == actConnection or self.channels[c].channel_name == actConnectionNoDigit:
+                    channelExists = True
+                    break
+
+            lastChar = actConnection[len(actConnection) -1]
+            if lastChar == 'R' or lastChar == 'r' or lastChar == 'L' or lastChar == 'l':
+                for c in range(len(self.channels)):
+                    if self.channels[c].channel_name == actConnection[:-1]:
+                        channelExists = True
+                        break
+
+            # search for other ports => possible stereo
+            sameConnectionCount = 0
+            for j in range(0, len(connections)):
+                if self.remove_last_digit(connections[j]) == actConnectionNoDigit:
+                    sameConnectionCount+=1
+
+            stereo = (sameConnectionCount == 2)
+
+            if stereo:
+                name = actConnectionNoDigit
+            else:
+                name = actConnection
+                # search for 'L' - 'R' paired stereo
+                if actConnection[len(actConnection)-1] == 'L' or actConnection[len(actConnection)-1] == 'l':
+                    for j in range(0, len(connections)):
+                        if connections[j] == actConnection[:-1] + 'R' or connections[j] == actConnection[:-1] + 'r':
+                            name = actConnection[:-1]
+                            stereo = True
                             break
 
-                    lastChar = actConnection[len(actConnection) -1]
-                    if lastChar == 'R' or lastChar == 'r' or lastChar == 'L' or lastChar == 'l':
-                        for c in range(len(self.channels)):
-                            if self.channels[c].channel_name == actConnection[:-1]:
-                                channelExists = True
+                else:
+                    if actConnection[len(actConnection)-1] == 'R' or actConnection[len(actConnection)-1] == 'r':
+                        for j in range(0, len(connections)):
+                            if connections[j] == actConnection[:-1] + 'L' or connections[j] == actConnection[:-1] + 'l':
+                                name = actConnection[:-1]
+                                stereo = True
                                 break
 
-                    # search for other ports => possible stereo
-                    sameConnectionCount = 0
-                    for j in range(0, len(connections)):
-                        if self.remove_last_digit(connections[j]) == actConnectionNoDigit:
-                            sameConnectionCount+=1
 
-                    stereo = (sameConnectionCount == 2)
 
-                    if stereo:
-                        name = actConnectionNoDigit
+            if not channelExists:
+                c = self.add_channel(name, stereo, 0, 0)
+                self.bridged_channel.append(c)
+
+            # connect and disconnect (bridge) ports
+            if stereo:
+                system_port_connections = self.mixer.get_port_system_connections(actConnection)
+                for k in range(0, len(system_port_connections)):
+                    if channelExists:
+                        self.mixer.connect_ports(actConnection, self.mixer.client_name() + ':' + name + ' R')
+                        self.mixer.connect_ports(self.mixer.client_name() + ':' + name + ' Out R', system_port_connections[k])
+                        
+                        self.bridged_connection.append([actConnection, self.mixer.client_name() + ':' + name + ' R'])
+                        self.bridged_connection.append([self.mixer.client_name() + ':' + name + ' Out R', system_port_connections[k]])
                     else:
-                        name = actConnection
-                        # search for 'L' - 'R' paired stereo
-                        if actConnection[len(actConnection)-1] == 'L' or actConnection[len(actConnection)-1] == 'l':
-                            for j in range(0, len(connections)):
-                                if connections[j] == actConnection[:-1] + 'R' or connections[j] == actConnection[:-1] + 'r':
-                                    name = actConnection[:-1]
-                                    stereo = True
-                                    break
+                        self.mixer.connect_ports(actConnection, self.mixer.client_name() + ':' + name + ' L')
+                        self.mixer.connect_ports(self.mixer.client_name() + ':' + name + ' Out L', system_port_connections[k])
 
-                        else:
-                            if actConnection[len(actConnection)-1] == 'R' or actConnection[len(actConnection)-1] == 'r':
-                                for j in range(0, len(connections)):
-                                    if connections[j] == actConnection[:-1] + 'L' or connections[j] == actConnection[:-1] + 'l':
-                                        name = actConnection[:-1]
-                                        stereo = True
-                                        break
+                        self.bridged_connection.append([actConnection, self.mixer.client_name() + ':' + name + ' L'])
+                        self.bridged_connection.append([self.mixer.client_name() + ':' + name + ' Out L', system_port_connections[k]])
 
+                    self.mixer.disconnect_ports(actConnection, system_port_connections[k])
+                    self.unbridged_connection.append([actConnection, system_port_connections[k]])
+            else: # mono
+                self.mixer.connect_ports(actConnection, self.mixer.client_name() + ':' + name)
+                self.bridged_connection.append([actConnection, self.mixer.client_name() + ':' + name])
+                system_port_connections = self.mixer.get_port_system_connections(actConnection)
+                for k in range(0, len(system_port_connections)):
+                    self.mixer.connect_ports(self.mixer.client_name() + ':' + name + ' Out', system_port_connections[k])
+                    self.bridged_connection.append([self.mixer.client_name() + ':' + name + ' Out', system_port_connections[k]])
+                    self.mixer.disconnect_ports(actConnection, system_port_connections[k])
+                    self.bridged_connection.append([actConnection, system_port_connections[k]])
 
+        self.window.show_all()		
 
-                    if not channelExists:
-                        self.add_channel(name, stereo, 0, 0)
+    def on_unbridge_system(self, widget=None):
+        print 'Unbridge System Connections'
 
-                    # connect and disconnect (bridge) ports
-                    if not stereo:
-                        self.mixer.connect_ports(actConnection, self.mixer.client_name() + ':' + name)
-                        system_port_connections = self.mixer.get_port_system_connections(actConnection)
-                        for k in range(0, len(system_port_connections)):
-                            self.mixer.connect_ports(self.mixer.client_name() + ':' + name + ' Out', system_port_connections[k])
-                            self.mixer.disconnect_ports(actConnection, system_port_connections[k])
-                    else:
-                        system_port_connections = self.mixer.get_port_system_connections(actConnection)
-                        for k in range(0, len(system_port_connections)):
-                            if channelExists:
-                                self.mixer.connect_ports(actConnection, self.mixer.client_name() + ':' + name + ' R')
-                                self.mixer.connect_ports(self.mixer.client_name() + ':' + name + ' Out R', system_port_connections[k])
-                            else:
-                                self.mixer.connect_ports(actConnection, self.mixer.client_name() + ':' + name + ' L')
-                                self.mixer.connect_ports(self.mixer.client_name() + ':' + name + ' Out L', system_port_connections[k])
+        for connection in self.unbridged_connection:
+            self.mixer.connect_ports(connection[0], connection[1])
+        self.unbridged_connection[:] = []
 
-                            self.mixer.disconnect_ports(actConnection, system_port_connections[k])
+        for connection in self.bridged_connection:
+            self.mixer.disconnect_ports(connection[0], connection[1])
+        self.bridged_connection[:] = []
 
-                self.window.show_all()		
-		
+        if widget != None: # we are closing
+            for channel in self.bridged_channel:
+                self.on_remove_input_channel(widget, channel)
+            self.bridged_channel[:] = []
+
     def on_edit_input_channel(self, widget, channel):
         print 'Editing channel "%s"' % channel.channel_name
         channel.on_channel_properties()
