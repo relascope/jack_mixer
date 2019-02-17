@@ -924,8 +924,6 @@ NullterminatedArrSize(const char** array)
 static PyObject*
 Mixer_get_systemport_connections(MixerObject *self, PyObject *args)
 {
-    printf("Log [%s:%d in %s]\n",__FILE__,__LINE__,__FUNCTION__);
-
     const char** conns;
     conns = get_systemport_connections(self->mixer);
 
@@ -943,8 +941,6 @@ Mixer_get_systemport_connections(MixerObject *self, PyObject *args)
 static PyObject*
 Mixer_get_port_system_connections(MixerObject *self, PyObject *args)
 {
-    printf("Log [%s:%d in %s]\n",__FILE__,__LINE__,__FUNCTION__);
-
     const char** conns;
     const char* port;
 

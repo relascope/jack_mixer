@@ -1512,9 +1512,6 @@ bool startsWith(const char *pre, const char *str)
 #define MAX_CONNECTIONS 48
 
 const char** get_systemport_connections(jack_mixer_t mixer) {
-
-    printf("Log [%s:%d in %s]\n",__FILE__,__LINE__,__FUNCTION__);
-
     const char **inports;
     const char* client_name = jack_get_client_name(mixer_ctx_ptr->jack_client);
     if ((inports = jack_get_ports(mixer_ctx_ptr->jack_client, "system", NULL, JackPortIsInput)) == NULL) {
@@ -1556,8 +1553,6 @@ const char** get_systemport_connections(jack_mixer_t mixer) {
 }
 
 const char **get_port_system_connections(jack_mixer_t mixer, const char *port_name) {
-    printf("Log [%s:%d in %s]\n",__FILE__,__LINE__,__FUNCTION__);
-
     const char **connections;
     jack_port_t *port = jack_port_by_name(mixer_ctx_ptr->jack_client, port_name);
     connections = jack_port_get_all_connections(mixer_ctx_ptr->jack_client, port);
@@ -1574,8 +1569,6 @@ const char **get_port_system_connections(jack_mixer_t mixer, const char *port_na
     while (connections[i] != '\0') {
         if (startsWith("system", connections[i])) {
             system_connections[count] = malloc(strlen(connections[i]) +1);
-            printf("Log [%s:%d in %s]\n",__FILE__,__LINE__,__FUNCTION__);
-
             strcpy(system_connections[count++], connections[i]);
         }
         ++i;
