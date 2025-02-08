@@ -1,3 +1,8 @@
+Old fork of Jack-mixer adding the functionality to "bridge" System Outputs. 
+
+You get a mixer channel (mono/stereo) for everything connected to a system_output, so you can comfortably control/mute everything that goes to a device. 
+
+
 jack_mixer -- Jack Audio Mixer
 ==============================
 
